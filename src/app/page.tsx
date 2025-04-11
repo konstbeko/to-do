@@ -1,103 +1,167 @@
-import Image from "next/image";
+// src/app/page.tsx
+"use client";
+import { useState, useEffect } from "react";
+
+// Definiere den Typ für Aufgaben
+interface Task {
+    id: number;
+    text: string;
+}
+
+// Hilfsfunktion, um Sekunden in "mm:ss" zu formatieren
+function formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+}
+
+function Timer() {
+    // Der Timer arbeitet intern mit Sekunden
+    const [time, setTime] = useState<number>(0); // verbleibende Zeit in Sekunden
+    const [isRunning, setIsRunning] = useState<boolean>(false);
+    const [inputValue, setInputValue] = useState<number>(0); // Eingabe in Minuten
+    const [hasStarted, setHasStarted] = useState<boolean>(false);
+    const [elapsedTime, setElapsedTime] = useState<number>(0); // gelaufene Zeit in Sekunden (nur aktive Zeit)
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
+        if (isRunning && time > 0) {
+            interval = setInterval(() => {
+                setTime((prevTime) => prevTime - 1);
+                setElapsedTime((prev) => prev + 1);
+            }, 1000);
+        } else if (time <= 0 && hasStarted && isRunning) {
+            // Timer beenden, wenn 0 erreicht wird
+            setIsRunning(false);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isRunning, time, hasStarted]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Eingabewert (in Minuten) in eine Zahl konvertieren
+        setInputValue(Number(e.target.value));
+    };
+
+    const startTimer = () => {
+        if (inputValue > 0) {
+            const initialSeconds = inputValue * 60; // Umrechnung in Sekunden
+            setTime(initialSeconds);
+            setElapsedTime(0);
+            setIsRunning(true);
+            setHasStarted(true);
+        }
+    };
+
+    const pauseResumeTimer = () => {
+        setIsRunning(!isRunning);
+    };
+
+    return (
+        <div className="flex flex-col items-start space-y-2 p-2 border rounded shadow-sm">
+            {hasStarted && time > 0 ? (
+                <div className="text-lg font-mono">
+                    Restzeit (Min:Sek): {formatTime(time)}
+                </div>
+            ) : hasStarted && time <= 0 ? (
+                // Fertig-Zustand: Pastellgrünes Feld mit der gelaufenen aktiven Zeit
+                <div className="w-full p-2 bg-green-100 rounded text-green-800">
+                    Fertig! Der Timer lief für (Min:Sek):{" "}
+                    {formatTime(elapsedTime)}
+                </div>
+            ) : null}
+            {/* Anzeige des Eingabefelds oder des Pause/Resume-Buttons */}
+            {!hasStarted ? (
+                <div className="flex items-center space-x-2">
+                    <div className="flex flex-col">
+                        <label className="text-sm">
+                            Eingabezeit in Minuten
+                        </label>
+                        <input
+                            type="number"
+                            value={inputValue}
+                            onChange={handleInputChange}
+                            className="border p-1 rounded w-24 mt-1"
+                            placeholder="z.B. 5"
+                        />
+                    </div>
+                    <button
+                        onClick={startTimer}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                    >
+                        Start
+                    </button>
+                </div>
+            ) : hasStarted && time > 0 ? (
+                <button
+                    onClick={pauseResumeTimer}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                >
+                    {isRunning ? "Pause" : "Resume"}
+                </button>
+            ) : null}
+        </div>
+    );
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [newTask, setNewTask] = useState<string>("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    const addTask = () => {
+        if (newTask.trim() !== "") {
+            const task: Task = { id: Date.now(), text: newTask };
+            setTasks([...tasks, task]);
+            setNewTask("");
+        }
+    };
+
+    const deleteTask = (id: number) => {
+        setTasks(tasks.filter((task) => task.id !== id));
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-100 p-6">
+            <div className="max-w-xl mx-auto bg-white p-6 rounded shadow-md">
+                <h1 className="text-2xl font-bold mb-4">To‑Do</h1>
+                {/* Eingabefeld und Button zum Hinzufügen einer neuen Aufgabe */}
+                <div className="mb-4 flex">
+                    <input
+                        type="text"
+                        placeholder="Aufgabe eingeben..."
+                        value={newTask}
+                        onChange={(e) => setNewTask(e.target.value)}
+                        className="flex-grow border p-2 rounded-l"
+                    />
+                    <button
+                        onClick={addTask}
+                        className="bg-green-500 text-white px-4 rounded-r hover:bg-green-600"
+                    >
+                        Hinzufügen
+                    </button>
+                </div>
+                {/* Aufgabenliste: Jede Aufgabe wird mit zugehörigem Timer und Löschbutton dargestellt */}
+                <div className="space-y-4">
+                    {tasks.map((task) => (
+                        <div
+                            key={task.id}
+                            className="border p-4 rounded flex flex-col space-y-2"
+                        >
+                            <div className="flex justify-between items-center">
+                                <h2 className="font-medium">{task.text}</h2>
+                                <button
+                                    onClick={() => deleteTask(task.id)}
+                                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                                >
+                                    Löschen
+                                </button>
+                            </div>
+                            <Timer />
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
